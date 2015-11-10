@@ -1,0 +1,47 @@
+import java.io.BufferedReader;
+import java.io.IOException;
+import java.io.InputStreamReader;
+import java.sql.*;
+
+public class DBMS {
+
+	public static void main(String[] args) {
+		final int MAX_LEN = 255; 
+		try {
+			// simulate command line to get user input
+			for (int prompt = 1; prompt > 0;) {
+				System.out.print("dbms> ");
+				BufferedReader userInput = new BufferedReader(new InputStreamReader(System.in));
+				
+				String commandLine = userInput.readLine();
+				if (commandLine == null) { continue; }
+				if (commandLine.length() > MAX_LEN) { continue; }
+				String[] commands = commandLine.split(" ");
+				
+				switch (commands[0]) {
+				
+				}
+				DriverManager.registerDriver(new oracle.jdbc.driver.OracleDriver());
+//				Connection c = new Connection("jdbc:oracle:thin:@dbhost.ugrad.cs.ubc.ca:1522:ug", 
+//						userName, password);
+			}
+			
+			
+		} catch (SQLException e) {
+			e.printStackTrace();
+		} catch (IOException e) {
+			e.printStackTrace();
+		}
+	}
+	
+	/**
+	 * prints the arguments entered into the command line
+	 * @param commands
+	 */
+	public static void printCommands(String[] commands) {
+		for (String s : commands) {
+			System.out.print(s);
+		}
+	}
+	
+}

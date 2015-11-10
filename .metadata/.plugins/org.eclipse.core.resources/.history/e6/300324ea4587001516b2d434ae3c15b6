@@ -1,0 +1,126 @@
+package classes;
+import java.io.BufferedReader;
+import java.io.File;
+import java.io.FileNotFoundException;
+import java.io.IOException;
+import java.io.InputStreamReader;
+import java.sql.*;
+import java.util.Scanner;
+
+public class DBMS {
+
+	public static void main(String[] args) {
+		final int MAX_LEN = 255; 
+		Connection connection = null;
+		printInstructions();
+		try {
+			// simulate command line to get user input
+			for (int prompt = 1; prompt > 0;) {
+				System.out.print("dbms> ");
+				BufferedReader userInput = new BufferedReader(new InputStreamReader(System.in));
+				
+				String commandLine = userInput.readLine();
+				if (commandLine == null) { continue; }
+				if (commandLine.length() > MAX_LEN) { continue; }
+				String[] commands = commandLine.split(" ");
+//				printCommands(commands);
+				int commandLength = commands.length;
+				
+				switch (commands[0]) {
+				case "connect":
+					if (commandLength != 3) { break; }
+					try {
+						connection = connectToJDBC(commands[1], commands[2]);
+						System.out.println("Connected");
+					} catch (SQLException sqe) {
+						System.out.println(sqe.getMessage());
+						continue;
+					}
+					break;
+				case "close":
+					try {
+					connection.close();
+					System.out.println("Connection closed");;
+					} catch (SQLException sqe) {
+						sqe.getMessage();
+					}
+					break;
+				case "load":
+					if (commandLength != 2) { break; }
+					loadFile(commands[1]);
+					break;
+				case "insert":
+					break;
+				case "delete":
+					break;
+				case "modify":
+					break;
+				default: 
+					continue;
+				
+				}
+			}
+		} catch (IOException e) {
+			e.printStackTrace();
+		} 
+	}
+	
+	/**
+	 * populate the SQL DB with the statements in the given file
+	 * @param filename
+	 */
+	private static void loadFile(String filename) {
+		try {
+			String content = new Scanner(new File(filename)).useDelimiter(";").next();
+			System.out.println(content);
+		} catch (FileNotFoundException e) {
+			e.getMessage();
+			e.printStackTrace();
+		}	
+	}
+	
+	/**
+	 * Register the JDBC Driver and return a connection to JDBC
+	 * @param username
+	 * @param password
+	 * @throws SQLException 
+	 */
+	private static Connection connectToJDBC(String username, String password) throws SQLException {
+		DriverManager.registerDriver(new oracle.jdbc.driver.OracleDriver());
+		return DriverManager.getConnection(
+				  "jdbc:oracle:thin:@dbhost.ugrad.cs.ubc.ca:1522:ug", username, password);
+	}
+	
+	/**
+	 * prints the opening statements and instructions for the commandline
+	 */
+	private static void printInstructions() {
+		System.out.println("\n          Welcome to the DBMS          "
+				+ "\n======================================"
+				+ "\nCommands: "
+				+ "\n[1] connect <username> <password>  "
+				+ "\n    Connect to the JDBC."
+				+ "\n[2] load <filename>"
+				+ "\n    Load data to DB with .sql file."
+				+ "\n[3] "
+				+ "\n[4] "
+				+ "\n[5] "
+				+ "\n[6] close"
+				+ "\n    Close the connection to JDBC."
+				+ "\n======================================"
+				+ "\n\n");
+		
+	}
+	
+	/**
+	 * prints the arguments entered into the command line
+	 * @param commands
+	 */
+	private static void printCommands(String[] commands) {
+		for (String s : commands) {
+			System.out.print(s + " ");
+		}
+		System.out.print("\n");
+	}
+	
+}

@@ -1,0 +1,77 @@
+import java.io.BufferedReader;
+import java.io.IOException;
+import java.io.InputStreamReader;
+import java.sql.*;
+
+public class DBMS {
+
+	public static void main(String[] args) {
+		final int MAX_LEN = 255; 
+		final Connection connection;
+		try {
+			// simulate command line to get user input
+			for (int prompt = 1; prompt > 0;) {
+				System.out.print("dbms> ");
+				BufferedReader userInput = new BufferedReader(new InputStreamReader(System.in));
+				
+				String commandLine = userInput.readLine();
+				if (commandLine == null) { continue; }
+				if (commandLine.length() > MAX_LEN) { continue; }
+				String[] commands = commandLine.split(" ");
+//				printCommands(commands);
+				
+				if (commands.length < 2) { continue; }
+				switch (commands[0]) {
+				case "connect":
+					try {
+						conection = connectToJDBC(commands[1], commands[2]);
+						System.out.println("Connected");
+					} catch (SQLException sqe) {
+						System.out.println(sqe.getMessage());
+						continue;
+					}
+					break;
+				case "close":
+					
+				case "insert":
+					break;
+				case "delete":
+					break;
+				case "modify":
+					break;
+				default: 
+					continue;
+				
+				}
+			
+
+			}
+		} catch (IOException e) {
+			e.printStackTrace();
+		}
+	}
+	
+	/**
+	 * Register the JDBC Driver and return a connection to JDBC
+	 * @param username
+	 * @param password
+	 * @throws SQLException 
+	 */
+	private static Connection connectToJDBC(String username, String password) throws SQLException {
+		DriverManager.registerDriver(new oracle.jdbc.driver.OracleDriver());
+		return DriverManager.getConnection(
+				  "jdbc:oracle:thin:@dbhost.ugrad.cs.ubc.ca:1522:ug", username, password);
+	}
+	
+	/**
+	 * prints the arguments entered into the command line
+	 * @param commands
+	 */
+	private static void printCommands(String[] commands) {
+		for (String s : commands) {
+			System.out.print(s + " ");
+		}
+		System.out.print("\n");
+	}
+	
+}
