@@ -45,7 +45,7 @@ public class DBMS {
 					}
 					break;
 				case "load":
-					if (commandLength != 2) { break; }
+					if (commandLength > 1) { break; }
 					loadFile();
 					break;
 				case "insert":
@@ -69,14 +69,19 @@ public class DBMS {
 	 */
 	private static void loadFile() {
 		try {
-			Scanner file = new Scanner(new FileInputStream(
-					new File("resources/asg3.2015.sql.create.docx"))).useDelimiter(";");
-			while (file.hasNext()) {
-				String query = file.next();
-				System.out.println(query);
-				// execute the statement read from file
-				executeStatement(query);
+			String create = new Scanner(new FileInputStream(
+					new File("create.txt"))).useDelimiter("\\Z").next();
+			String data = new Scanner(new FileInputStream(
+					new File("data.txt"))).useDelimiter("\\Z").next();
+			String[] files = new String[]{create, data};
+			for (String file : files) {
+				String[] queries = file.split(";");
+				for (String query : queries) {
+					System.out.println(query);
+					executeStatement(query);
+				}
 			}
+
 		} catch (FileNotFoundException e) {
 			e.getMessage();
 			e.printStackTrace();
