@@ -23,45 +23,143 @@ public class DBMS {
 //				printCommands(commands);
 				int commandLength = commands.length;
 				
-				switch (commands[0]) {
-				case "connect":
-					if (commandLength != 3) { break; }
-					try {
-						connection = connectToJDBC(commands[1], commands[2]);
-						System.out.println("Connected");
-						statement = connection.createStatement();
-						System.out.println("Statement created");
-					} catch (SQLException sqe) {
-						System.out.println(sqe.getMessage());
-						continue;
-					}
-					break;
-				case "close":
-					try {
-					connection.close();
-					System.out.println("Connection closed");;
-					} catch (SQLException sqe) {
-						sqe.getMessage();
-					}
-					break;
-				case "load":
-					if (commandLength > 1) { break; }
-					loadFile();
-					break;
-				case "insert":
-					break;
-				case "delete":
-					break;
-				case "modify":
-					break;
-				default: 
-					continue;
-				
+				switch (commands[0].toLowerCase()) {
+					case "connect":
+//					if (commandLength != 3) { break; }
+						try {
+//						connection = connectToJDBC(commands[1], commands[2]);
+							connection = connect();
+							System.out.println("Connected");
+							statement = connection.createStatement();
+							System.out.println("Statement created");
+						} catch (SQLException sqe) {
+							System.out.println(sqe.getMessage());
+							continue;
+						}
+						break;
+					case "close":
+						try {
+							connection.close();
+							System.out.println("Connection closed");
+						} catch (SQLException sqe) {
+							sqe.getMessage();
+						}
+						break;
+					case "load":
+						if (commandLength > 1) {
+							break;
+						}
+						loadFile();
+						break;
+					case "insert":
+						insert(commands);
+						break;
+					case "delete":
+						break;
+					case "update":
+						break;
+					case "select":
+						String query = getQueryString(commands);
+						ResultSet results = executeQuery(query);
+						printResults(results);
+						break;
 				}
 			}
 		} catch (IOException e) {
 			e.printStackTrace();
 		} 
+	}
+
+	private static void printResults(ResultSet results) {
+		try {
+			ResultSetMetaData metaData = results.getMetaData();
+			System.out.println(metaData.getTableName(1));
+
+			//assumed to be a max size as examples don't add a lot of tuples
+			String[][] table = new String[50][];
+			String columnHeaders = "";
+			for (int i = 1; i < metaData.getColumnCount(); i++) {
+				columnHeaders += (metaData.getColumnName(i) + " ");
+			}
+			String[] headers = columnHeaders.split(" ");
+			table[0] = headers;
+
+			while (results.next()) {
+				String row = "";
+				for (int i = 1; i < metaData.getColumnCount(); i++) {
+					row += (results.getString(i) + " ");
+					String[] rowData = row.split(" ");
+					table[i] = rowData;
+				}
+			}
+
+			for (final String[] row : table) {
+				System.out.format("%15s%15s%15s\n", row);
+			}
+
+
+		} catch (SQLException sqe) {
+			sqe.getMessage();
+		}
+	}
+
+	/**
+	 * adds a tuple of the given entity with the given attributes if the query is valid
+	 * and does not already exist in the relation
+	 * @param commands
+	 */
+	private static void insert(String[] commands) {
+		String query = getQueryString(commands);
+		if (!alreadyAdded(commands)) {
+			int rows = executeStatement(query);
+			if (rows == 1) {
+				System.out.println("Entry successfully added");
+			}
+		} else {
+			System.out.println("Entry was not added: duplicate");
+		}
+	}
+
+	private static String getQueryString(String[] commands) {
+		String query = "";
+		for (String c : commands) {
+			query += (c + " ");
+		}
+		return query;
+	}
+
+	/**
+	 * iterates through the primary key column to check for duplicate entry based on primary key
+	 * @param commands
+	 * @return
+	 */
+	private static boolean alreadyAdded(String[] commands) {
+		boolean added = false;
+		String relation = commands[2];
+		String values = commands[3];
+		String primaryKey = extractPrimaryKey(values);
+		ResultSet results = executeQuery("SELECT * FROM " + relation);
+		try {
+			while (results.next()) {
+				if (results.getString(1).equals(primaryKey)) {
+					return true;
+				}
+			}
+		} catch (SQLException sqe) {
+			sqe.getMessage();
+		}
+		return added;
+	}
+
+	/**
+	 * extract the primary key from values
+	 * @param valueString
+	 * @return
+	 */
+	private static String extractPrimaryKey(String valueString) {
+		String[] values = valueString.split(",");
+		String[] result = values[0].split("'");
+		return result[1];
 	}
 	
 	/**
@@ -81,11 +179,24 @@ public class DBMS {
 					executeStatement(query);
 				}
 			}
-
 		} catch (FileNotFoundException e) {
 			e.getMessage();
 			e.printStackTrace();
 		}	
+	}
+
+	/**
+	 * return the results of a query
+	 * @return
+	 */
+	private static ResultSet executeQuery(String query) {
+		ResultSet results = null;
+		try {
+			results = statement.executeQuery(query);
+		} catch (SQLException sqe) {
+			sqe.getMessage();
+		}
+		return results;
 	}
 
 	/**
@@ -113,6 +224,17 @@ public class DBMS {
 		DriverManager.registerDriver(new oracle.jdbc.driver.OracleDriver());
 		return DriverManager.getConnection(
 				  "jdbc:oracle:thin:@dbhost.ugrad.cs.ubc.ca:1522:ug", username, password);
+	}
+
+	/**
+	 * connection for testing only TODO: delete when finished
+	 * @return
+	 * @throws SQLException
+	 */
+	private static Connection connect() throws SQLException {
+		DriverManager.registerDriver(new oracle.jdbc.driver.OracleDriver());
+		return DriverManager.getConnection(
+				"jdbc:oracle:thin:@dbhost.ugrad.cs.ubc.ca:1522:ug", "ora_w5x9a", "a16179146");
 	}
 	
 	/**
