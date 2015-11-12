@@ -59,9 +59,7 @@ public class DBMS {
 					case "update":
 						break;
 					case "select":
-						String query = getQueryString(commands);
-						ResultSet results = executeQuery(query);
-						printResults(results);
+						select(commands);
 						break;
 				}
 			}
@@ -70,34 +68,28 @@ public class DBMS {
 		} 
 	}
 
+	/**
+	 * produces the relation that is selected by the user and print's it to the terminal
+	 * @param commands
+	 */
+	private static void select(String[] commands) {
+		String query = getQueryString(commands);
+		ResultSet results = executeQuery(query);
+		printResults(results);
+	}
+
 	private static void printResults(ResultSet results) {
 		try {
-			ResultSetMetaData metaData = results.getMetaData();
-			System.out.println(metaData.getTableName(1));
-
-			//assumed to be a max size as examples don't add a lot of tuples
-			String[][] table = new String[50][];
-			String columnHeaders = "";
-			for (int i = 1; i < metaData.getColumnCount(); i++) {
-				columnHeaders += (metaData.getColumnName(i) + " ");
-			}
-			String[] headers = columnHeaders.split(" ");
-			table[0] = headers;
-
+			ResultSetMetaData rsmd = results.getMetaData();
+			int columnsNumber = rsmd.getColumnCount();
 			while (results.next()) {
-				String row = "";
-				for (int i = 1; i < metaData.getColumnCount(); i++) {
-					row += (results.getString(i) + " ");
-					String[] rowData = row.split(" ");
-					table[i] = rowData;
+				for (int i = 1; i <= columnsNumber; i++) {
+					if (i > 1) System.out.print(",  ");
+					String columnValue = results.getString(i);
+					System.out.print(columnValue + " " + rsmd.getColumnName(i));
 				}
+				System.out.println("");
 			}
-
-			for (final String[] row : table) {
-				System.out.format("%15s%15s%15s\n", row);
-			}
-
-
 		} catch (SQLException sqe) {
 			sqe.getMessage();
 		}
