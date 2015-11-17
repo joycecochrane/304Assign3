@@ -4,31 +4,26 @@ import java.sql.*;
 import java.util.Scanner;
 
 public class DBMS {
-	final static int MAX_LEN = 255;
 	static Connection connection = null;
 	static Statement statement = null;
 
 	public static void main(String[] args) {
 		printInstructions();
-		try {
-			// simulate command line to get user input
+		try {// simulate command line to get user input
 			for (int prompt = 1; prompt > 0;) {
 				System.out.print("dbms> ");
 				BufferedReader userInput = new BufferedReader(new InputStreamReader(System.in));
-				
 				String commandLine = userInput.readLine();
 				if (commandLine == null) { continue; }
-				if (commandLine.length() > MAX_LEN) { continue; }
 				String[] commands = commandLine.split(" ");
 //				printCommands(commands);
 				int commandLength = commands.length;
 				
 				switch (commands[0].toLowerCase()) {
 					case "connect":
-//					if (commandLength != 3) { break; }
+					if (commandLength != 3) { break; }
 						try {
-//						connection = connectToJDBC(commands[1], commands[2]);
-							connection = connect();
+							connection = connectToJDBC(commands[1], commands[2]);
 							System.out.println("Connected");
 							statement = connection.createStatement();
 							System.out.println("Statement created");
@@ -52,25 +47,49 @@ public class DBMS {
 						loadFile();
 						break;
 					case "insert":
-						insert(commands);
+						insertTuple(commands);
 						break;
 					case "delete":
-						break;
-					case "update":
+						if (commandLength == 2) {
+							executeUpdate("DELETE " + commands[1]);
+						} else {
+							deleteTuple(commands);
+						}
 						break;
 					case "select":
 						select(commands);
 						break;
 				}
 			}
-		} catch (IOException e) {
+		}
+		catch (IOException e) {
 			e.printStackTrace();
-		} 
+		}
+	}
+
+	/**
+	 * deletes a tuple if it is present in the relation
+	 * @param commands
+	 */
+	private static void deleteTuple(String[] commands) {
+		String query = getQueryString(commands);;
+		try {
+		int stock = getStock(commands);
+		if (stock == 0) {
+			int rows = executeUpdate(query);
+			if (rows == 1) {
+				System.out.println("Tuple deleted");
+				return;
+			}
+		}} catch (SQLException sqe) {
+			sqe.getMessage();
+		}
+		System.out.println("Stock is not empty, delete failed");
 	}
 
 	/**
 	 * produces the relation that is selected by the user and print's it to the terminal
-	 * @param commands
+	 * @param commands commands provided by user in the terminal
 	 */
 	private static void select(String[] commands) {
 		String query = getQueryString(commands);
@@ -78,6 +97,10 @@ public class DBMS {
 		printResults(results);
 	}
 
+	/**
+	 * prints the contents of a ResultSet
+	 * @param results results from a query
+	 */
 	private static void printResults(ResultSet results) {
 		try {
 			ResultSetMetaData rsmd = results.getMetaData();
@@ -92,6 +115,8 @@ public class DBMS {
 			}
 		} catch (SQLException sqe) {
 			sqe.getMessage();
+		} catch (NullPointerException npe) {
+			System.out.println("Query failed, try again");
 		}
 	}
 
@@ -100,10 +125,10 @@ public class DBMS {
 	 * and does not already exist in the relation
 	 * @param commands
 	 */
-	private static void insert(String[] commands) {
+	private static void insertTuple(String[] commands) {
 		String query = getQueryString(commands);
 		if (!alreadyAdded(commands)) {
-			int rows = executeStatement(query);
+			int rows = executeUpdate(query);
 			if (rows == 1) {
 				System.out.println("Entry successfully added");
 			}
@@ -112,6 +137,11 @@ public class DBMS {
 		}
 	}
 
+	/**
+	 * Get the string for the query
+	 * @param commands
+	 * @return
+	 */
 	private static String getQueryString(String[] commands) {
 		String query = "";
 		for (String c : commands) {
@@ -128,18 +158,26 @@ public class DBMS {
 	private static boolean alreadyAdded(String[] commands) {
 		boolean added = false;
 		String relation = commands[2];
-		String values = commands[3];
-		String primaryKey = extractPrimaryKey(values);
-		ResultSet results = executeQuery("SELECT * FROM " + relation);
-		try {
-			while (results.next()) {
-				if (results.getString(1).equals(primaryKey)) {
-					return true;
+		String values = "";
+		if (commands[0].toLowerCase().equals("insert")) {
+			values = commands[3];
+			String primaryKey = extractPrimaryKey(values);
+			ResultSet results = executeQuery("SELECT * FROM " + relation);
+			try {
+				while (results.next()) {
+					if (results.getString(1).equals(primaryKey)) {
+						return true;
+					}
 				}
+			} catch (SQLException sqe) {
+				sqe.getMessage();
 			}
-		} catch (SQLException sqe) {
-			sqe.getMessage();
+//		} else if (commands[0].toLowerCase().equals("delete")) {
+//			for (int i = 3; i < commands.length; i++) {
+//				values += commands[i];
+//			}
 		}
+
 		return added;
 	}
 
@@ -168,7 +206,7 @@ public class DBMS {
 				String[] queries = file.split(";");
 				for (String query : queries) {
 					System.out.println(query);
-					executeStatement(query);
+					executeUpdate(query);
 				}
 			}
 		} catch (FileNotFoundException e) {
@@ -196,7 +234,7 @@ public class DBMS {
 	 * executes the SQL statement given by the string
 	 * @param query sql statement
 	 */
-	private static int executeStatement(String query) {
+	private static int executeUpdate(String query) {
 		int rows = 0;
 		try {
 			rows = statement.executeUpdate(query);
@@ -205,7 +243,22 @@ public class DBMS {
 		}
 		return rows;
 	}
-	
+
+	/**
+	 * get the stock number for a specific item
+	 * @param commands
+	 * @return
+	 */
+	private static int getStock(String[] commands) throws SQLException {
+		String relation = commands[1];
+		String key = commands[3];
+		String value = commands[5];
+		ResultSet results = executeQuery("SELECT * FROM " + relation +
+				" WHERE " + key + " = " + value);
+		results.next();
+		return results.getInt("stock");
+	}
+
 	/**
 	 * Register the JDBC Driver and return a connection to JDBC
 	 * @param username
@@ -217,17 +270,6 @@ public class DBMS {
 		return DriverManager.getConnection(
 				  "jdbc:oracle:thin:@dbhost.ugrad.cs.ubc.ca:1522:ug", username, password);
 	}
-
-	/**
-	 * connection for testing only TODO: delete when finished
-	 * @return
-	 * @throws SQLException
-	 */
-	private static Connection connect() throws SQLException {
-		DriverManager.registerDriver(new oracle.jdbc.driver.OracleDriver());
-		return DriverManager.getConnection(
-				"jdbc:oracle:thin:@dbhost.ugrad.cs.ubc.ca:1522:ug", "ora_w5x9a", "a16179146");
-	}
 	
 	/**
 	 * prints the opening statements and instructions for the commandline
@@ -238,16 +280,14 @@ public class DBMS {
 				+ "\nCommands: "
 				+ "\n[1] connect <username> <password>  "
 				+ "\n    Connect to the JDBC."
-				+ "\n[2] load <filename>"
+				+ "\n[2] load"
 				+ "\n    Load data to DB with .sql file."
-				+ "\n[3] "
-				+ "\n[4] "
-				+ "\n[5] "
-				+ "\n[6] close"
+				+ "\n[3] Any valid SQLPlus query"
+				+ "\n	 Completes the operation."
+				+ "\n[4] close"
 				+ "\n    Close the connection to JDBC."
 				+ "\n======================================"
 				+ "\n\n");
-		
 	}
 	
 	/**
